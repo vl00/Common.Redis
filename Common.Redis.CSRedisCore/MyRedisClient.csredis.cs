@@ -346,7 +346,7 @@ public partial class MyRedisClient
         return c;
     }
 
-    static string GetScoreString(ref double score)
+    internal static string GetScoreString(ref double score)
     {
         return double.IsNegativeInfinity(score) ? "-inf"
             : double.IsPositiveInfinity(score) ? "+inf" 
@@ -369,8 +369,9 @@ public partial class MyRedisClient
         var db = GetCSRedisClient();
         var s1 = GetScoreString(ref min);
         var s2 = GetScoreString(ref max);
-        var v = orderByAsc ? await db.ZRangeByScoreWithScoresAsync(key, s1, s2, offset: offset, count: count)
-            : await db.ZRevRangeByScoreWithScoresAsync(key, s2, s1, offset: offset, count: count);
+        var c = count ?? -1L;
+        var v = orderByAsc ? await db.ZRangeByScoreWithScoresAsync(key, s1, s2, offset: offset, count: c)
+            : await db.ZRevRangeByScoreWithScoresAsync(key, s2, s1, offset: offset, count: c);
         return v.ToDictionary(_ => _.Item1, _ => Convert.ToDouble(_.Item2));
     }
 
@@ -381,8 +382,9 @@ public partial class MyRedisClient
         var db = GetCSRedisClient();
         var s1 = GetScoreString(ref min);
         var s2 = GetScoreString(ref max);
-        var v = orderByAsc ? await db.ZRangeByScoreWithScoresAsync<T>(key, s1, s2, offset: offset, count: count)
-            : await db.ZRevRangeByScoreWithScoresAsync<T>(key, s2, s1, offset: offset, count: count);
+        var c = count ?? -1L;
+        var v = orderByAsc ? await db.ZRangeByScoreWithScoresAsync<T>(key, s1, s2, offset: offset, count: c)
+            : await db.ZRevRangeByScoreWithScoresAsync<T>(key, s2, s1, offset: offset, count: c);
         return v.ToDictionary(_ => _.Item1, _ => Convert.ToDouble(_.Item2));
     }
 

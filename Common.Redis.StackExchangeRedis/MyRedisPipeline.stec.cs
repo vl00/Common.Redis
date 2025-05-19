@@ -1,4 +1,4 @@
-using StackExchange.Redis;
+﻿using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,27 +38,31 @@ public partial class MyRedisPipeline : IRedisPipeline
     public IRedisPipeline AddRaw<TBatch>(Func<TBatch, Task<object>> todo) => AddRaw(out _, todo);
     public IRedisPipeline AddRaw<TBatch, T>(Func<TBatch, Task<T>> todo) => AddRaw(out _, todo);
 
-    public IRedisPipeline AddRaw<TBatch>(out Task<object> task, Func<TBatch, Task<object>> todo)
+    public IRedisPipeline AddRaw<TBatch>(out Task<object> task, Func<TBatch, Task<object>> todo, Func<object, object> convert = null)
     {
         if (_batch is not TBatch b) throw new ArgumentException($"type 'TBatch' is not match");
-        AddTodo(out task, b, todo);
+        // 其实对于StackExchange.Redis, convert参数可以ignore
+        if (convert == null) AddTodo(out task, b, todo);
+        else AddTodo(out task, b, (b) => todo(b).ContinueWith(t => convert(t.Result), TaskContinuationOptions.OnlyOnRanToCompletion));
         return this;
     }
 
-    public IRedisPipeline AddRaw<TBatch, T>(out Task<T> task, Func<TBatch, Task<T>> todo)
+    public IRedisPipeline AddRaw<TBatch, T>(out Task<T> task, Func<TBatch, Task<T>> todo, Func<object, T> convert = null)
     {
         if (_batch is not TBatch b) throw new ArgumentException($"type 'TBatch' is not match");
-        AddTodo(out task, b, todo);
+        // 其实对于StackExchange.Redis, convert参数可以ignore
+        if (convert == null) AddTodo(out task, b, todo);
+        else AddTodo(out task, b, (b) => todo(b).ContinueWith(t => convert(t.Result), TaskContinuationOptions.OnlyOnRanToCompletion));
         return this;
     }
 
-    void AddTodo<TBatch>(out Task<object> t, TBatch _batch, Func<TBatch, Task<object>> todo)
+    protected void AddTodo<TBatch>(out Task<object> t, TBatch _batch, Func<TBatch, Task<object>> todo)
     {
         _tasks ??= new List<Task<object>>();
         _tasks.Add(t = todo?.Invoke(_batch));
     }
 
-    void AddTodo<TBatch, T>(out Task<T> t, TBatch _batch, Func<TBatch, Task<T>> todo)
+    protected void AddTodo<TBatch, T>(out Task<T> t, TBatch _batch, Func<TBatch, Task<T>> todo)
     {
         _tasks ??= new List<Task<object>>();
         _tasks.Add(Wrap(t = todo?.Invoke(_batch)));
@@ -84,9 +88,9 @@ public partial class MyRedisPipeline : IRedisPipeline
         (_batch as IDisposable)?.Dispose();
     }
 
-    T DoConvert<T>(Func<string, T> convert, string val)
+    protected T DoConvert<T>(Func<string, T> convert, string value)
     {
-        return convert != null ? convert(val) : _redis.OnDeserialize<T>(val);
+        return convert != null ? convert(value) : _redis.OnDeserialize<T>(value);
     }
 }
 

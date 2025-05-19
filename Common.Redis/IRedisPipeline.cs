@@ -15,11 +15,11 @@ public partial interface IRedisPipeline : IDisposable
     // StackExchange.Redis.IBatch
     T GetRaw<T>();
 
-    IRedisPipeline AddRaw<TBatch>(Func<TBatch, Task<object>> todo) => AddRaw(out _, todo);
-    IRedisPipeline AddRaw<TBatch, T>(Func<TBatch, Task<T>> todo) => AddRaw(out _, todo);
+    IRedisPipeline AddRaw<TBatch>(Func<TBatch, Task<object>> todo);
+    IRedisPipeline AddRaw<TBatch, T>(Func<TBatch, Task<T>> todo);
 
-    IRedisPipeline AddRaw<TBatch>(out Task<object> task, Func<TBatch, Task<object>> todo);
-    IRedisPipeline AddRaw<TBatch, T>(out Task<T> task, Func<TBatch, Task<T>> todo);
+    IRedisPipeline AddRaw<TBatch>(out Task<object> task, Func<TBatch, Task<object>> todo, Func<object, object> convert = null);
+    IRedisPipeline AddRaw<TBatch, T>(out Task<T> task, Func<TBatch, Task<T>> todo, Func<object, T> convert = null);
 
     Task<object[]> ExecuteAsync();
 }
